@@ -7,5 +7,5 @@ fi
 echo "WALLET: $WALLET"
 echo "WORKERNAME: $WORKERNAME"
 
-cd cpuminer-opt
-./cpuminer -u $WALLET.$WORKERNAME -t 4 -o stratum+tcp://cryptonight.eu.nicehash.com:3355 -p x -a cryptonight
+python3 cpuminer_driver.py $WALLET $WORKERNAME
+
