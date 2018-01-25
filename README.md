@@ -12,6 +12,7 @@ You can use the `WALLET` and `WORKERNAME` environment variables to configure whi
 
 ## Benchmark
 
-If you want to benchmark your own CPU remove the benchmarks.json file and build the container again. It will also select the optimal number of threads for your current setup.
+The container is benchmarked for an Intel i7-7700 Quad. If you want to benchmark your own CPU and select the optimal number of threads for your current setup use the `BENCHMARK` environment variable. This will take about 20 minutes.
 
-The file included are the benchmarks for an intel i7 7700 Quad.
+`docker run --restart unless-stopped -d -e WALLET='35LdgWoNdRMXK6dQzJaJSnaLw5W3o3tFG6' -e WORKERNAME=worker1 -e BENCHMARK=true pbutenee/docker-cpu-miner`
+
