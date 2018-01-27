@@ -28,7 +28,7 @@ WORKER = 'worker1'
 REGION = 'eu' # eu, usa, hk, jp, in, br
 BENCHMARKS_FILE = 'benchmarks.json'
 
-PROFIT_SWITCH_THRESHOLD = 0.1
+PROFIT_SWITCH_THRESHOLD = 0.05
 UPDATE_INTERVAL = 60
 
 EXCAVATOR_TIMEOUT = 10
