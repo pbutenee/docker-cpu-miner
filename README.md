@@ -16,3 +16,4 @@ The container is benchmarked for an Intel i7-7700 Quad. If you want to benchmark
 
 `docker run --restart unless-stopped -d -e WALLET='35LdgWoNdRMXK6dQzJaJSnaLw5W3o3tFG6' -e WORKERNAME=worker1 -e BENCHMARK=true pbutenee/docker-cpu-miner`
 
+While running, the script will update the hash rates based on the actual hash rates of the algorithm. So small mistakes in the benchmark will be corrected while running. The optimal number of threads however is never updated and benchmark mistakes that are more than 20% will most likely not be corrected.
