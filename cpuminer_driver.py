@@ -19,9 +19,11 @@ import socket
 import sys
 import urllib.error
 import urllib.request
-from time import sleep
+from time import sleep, time
 import os.path
 import subprocess
+import threading
+
 
 WALLET = '35LdgWoNdRMXK6dQzJaJSnaLw5W3o3tFG6'
 WORKER = 'worker1'
@@ -31,9 +33,54 @@ BENCHMARKS_FILE = 'benchmarks.json'
 PROFIT_SWITCH_THRESHOLD = 0.05
 UPDATE_INTERVAL = 60
 
+# artificailly increase profit if it hasn't been updated ever or in the past 24h
+PROFIT_INCREASE_TIME = 24 * 60 * 60    # s
+
+# number of hashes needed to compute the actual measured hash rate
+NOF_HASHES_BEFORE_UPDATE = 20
+
 EXCAVATOR_TIMEOUT = 10
 NICEHASH_TIMEOUT = 20
 
+
+class MinerThread(threading.Thread):
+    def __init__(self, cmd):
+        self.cmd = cmd
+        self.hash_sum = 0
+        self.nof_hashes = 0
+        self.process = None
+        threading.Thread.__init__(self)
+
+    def run(self):
+        with subprocess.Popen(self.cmd, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True) as self.process:
+            for line in self.process.stdout:
+                logging.info(line[ : line.rfind('\n')])
+                if 'Accepted' in line:
+                    line = line[ : line.rfind('H/s')]
+                    line = line[line.rfind(', ') + 2 : ]
+                    hash_rate = _convert_to_float(line)
+                    self.hash_sum += hash_rate
+                    self.nof_hashes += 1
+
+    def join(self):
+        self.process.terminate()
+        super().join()
+
+
+'''
+Assumes output is of the form '45.3 ' or '456.9 M'
+'''
+def _convert_to_float(output):
+    hash_rate = float(output[ : output.rfind(' ')])
+    if output[-1] == 'k':
+        hash_rate *= 1000
+    elif output[-1] == 'M':
+        hash_rate *= 1000000
+    elif output[-1] == 'G':
+        hash_rate *= 1000000000
+    elif output[-1] != ' ':
+        raise(NotImplementedError('The following unit is not yet supported: ' + output[-1] + ' or there is something wrong with the output: ' + output))
+    return hash_rate
 
 
 def nicehash_multialgo_info():
@@ -49,15 +96,23 @@ def nicehash_multialgo_info():
         ports[name] = int(algorithm['port'])
     return paying, ports
 
+'''
+Compute the expected revenue for each algorithm.
+
+For algorithms that haven't been used before or that haven't been used in the past 24h the hash rate is increased by 20%.
+This is to increase the likelyhood that an almost as profitable algorithm is selected so that the hash rates will be updated to the actual hash rate.
+'''
 def nicehash_mbtc_per_day(benchmarks, paying):
     """Calculates the BTC/day amount for every algorithm.
     device -- excavator device id for benchmarks
     paying -- algorithm pay information from NiceHash
     """
-
     revenue = {}
     for algorithm in benchmarks:
         revenue[algorithm] = paying[algorithm] * benchmarks[algorithm]['hash_rate'] * (24*60*60) * 1e-11
+        # increase revenue by 20% if the algortihm hasn't been updated ever or if it has been more than 24h
+        if 'last_updated' not in benchmarks[algorithm] or time() - benchmarks[algorithm]['last_updated'] > PROFIT_INCREASE_TIME:
+            revenue[algorithm] *= 1.2
 
     return revenue
 
@@ -67,8 +122,6 @@ def main():
     """Main program."""
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
                         level=logging.INFO)
-
-
 
     # benchmark if necessary
     if not os.path.isfile(BENCHMARKS_FILE):
@@ -80,7 +133,7 @@ def main():
     benchmarks = json.load(open(BENCHMARKS_FILE))
 
     running_algorithm = None
-    cpuminer_process = None
+    cpuminer_thread = None
 
     while True:
         try:
@@ -95,22 +148,32 @@ def main():
         except (json.decoder.JSONDecodeError, KeyError):
             logging.warning('failed to parse NiceHash stats')
         else:
+            # Update hash rate if enough accepted hases have been seen
+            if cpuminer_thread != None and cpuminer_thread.nof_hashes > NOF_HASHES_BEFORE_UPDATE:
+                benchmarks[running_algorithm]['hash_rate'] = cpuminer_thread.hash_sum / cpuminer_thread.nof_hashes
+                benchmarks[running_algorithm]['last_updated'] = time()
+                json.dump(benchmarks, open('benchmarks.json', 'w'))
+                logging.info('UPDATED HASH RATE OF ' + running_algorithm + ' TO: ' + str(benchmarks[running_algorithm]['hash_rate']))
+
+            # Compute payout and get best algorithm
             payrates = nicehash_mbtc_per_day(benchmarks, paying)
             best_algorithm = max(payrates.keys(), key=lambda algo: payrates[algo])
 
+            # Switch algorithm if it's worth while
             if running_algorithm == None or running_algorithm != best_algorithm and \
                 (payrates[running_algorithm] or payrates[best_algorithm]/payrates[running_algorithm] >= 1.0 + PROFIT_SWITCH_THRESHOLD):
 
                 # kill previous miner
-                if cpuminer_process != None:
-                    cpuminer_process.terminate()
+                if cpuminer_thread != None:
+                    cpuminer_thread.join()
                     logging.info('killed process running ' + running_algorithm)
 
                 # start miner
                 logging.info('starting mining using ' + best_algorithm + ' using ' + str(benchmarks[best_algorithm]['nof_threads']) + ' threads')
-                cpuminer_process = subprocess.Popen(['./cpuminer', '-u', WALLET + '.' + WORKER, '-p', 'x',
+                cpuminer_thread = MinerThread(['./cpuminer', '-u', WALLET + '.' + WORKER, '-p', 'x',
                     '-o', 'stratum+tcp://' + best_algorithm + '.' + REGION + '.' + 'nicehash.com:' + str(ports[best_algorithm]),
                     '-a', best_algorithm, '-t', str(benchmarks[best_algorithm]['nof_threads'])])
+                cpuminer_thread.start()
                 running_algorithm = best_algorithm
 
         sleep(UPDATE_INTERVAL)

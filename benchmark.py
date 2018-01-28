@@ -31,7 +31,7 @@ def run(nicehash_algorithms):
 	benchmark_str = 'Benchmark: '
 	for algorithm in nicehash_algorithms:
 	    if algorithm in miner_algorithms:
-	        bash_command = './cpuminer --benchmark --time-limit=9 -a ' + algorithm
+	        bash_command = './cpuminer --benchmark --time-limit=13 -a ' + algorithm
 	        optimal_nof_threads = 0
 	        optimal_hash_rate = 0
 	        logging.info('Benchmarking ' + algorithm + ' ...')
