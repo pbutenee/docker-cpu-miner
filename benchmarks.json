@@ -4,11 +4,11 @@
       "nof_threads":8
    },
    "hodl":{
-      "hash_rate":643.45,
+      "hash_rate":500.00,
       "nof_threads":8
    },
    "cryptonight":{
-      "hash_rate":220.0,
+      "hash_rate":200.0,
       "nof_threads":4
    },
    "x11gost":{
