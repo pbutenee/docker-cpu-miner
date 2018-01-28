@@ -161,7 +161,7 @@ def main():
 
             # Switch algorithm if it's worth while
             if running_algorithm == None or running_algorithm != best_algorithm and \
-                (payrates[running_algorithm] or payrates[best_algorithm]/payrates[running_algorithm] >= 1.0 + PROFIT_SWITCH_THRESHOLD):
+                (payrates[running_algorithm] == 0 or payrates[best_algorithm]/payrates[running_algorithm] >= 1.0 + PROFIT_SWITCH_THRESHOLD):
 
                 # kill previous miner
                 if cpuminer_thread != None:
