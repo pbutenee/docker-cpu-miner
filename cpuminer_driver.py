@@ -37,7 +37,7 @@ UPDATE_INTERVAL = 60
 PROFIT_INCREASE_TIME = 24 * 60 * 60    # s
 
 # number of hashes needed to compute the actual measured hash rate
-NOF_HASHES_BEFORE_UPDATE = 20
+NOF_HASHES_BEFORE_UPDATE = 10
 
 EXCAVATOR_TIMEOUT = 10
 NICEHASH_TIMEOUT = 20
@@ -111,8 +111,12 @@ def nicehash_mbtc_per_day(benchmarks, paying):
     for algorithm in benchmarks:
         revenue[algorithm] = paying[algorithm] * benchmarks[algorithm]['hash_rate'] * (24*60*60) * 1e-11
         # increase revenue by 20% if the algortihm hasn't been updated ever or if it has been more than 24h
-        if 'last_updated' not in benchmarks[algorithm] or time() - benchmarks[algorithm]['last_updated'] > PROFIT_INCREASE_TIME:
+        if 'last_updated' not in benchmarks[algorithm]:
             revenue[algorithm] *= 1.2
+        elif time() - benchmarks[algorithm]['last_updated'] > PROFIT_INCREASE_TIME:
+            nof_days_since_update = (time() - benchmarks[algorithm]['last_updated']) / PROFIT_INCREASE_TIME
+            revenue_multiplier = 1 + nof_days_since_update * 2 / 100
+            revenue[algorithm] *= min(1.2, revenue_multiplier)
 
     return revenue
 

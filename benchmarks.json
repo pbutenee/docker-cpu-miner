@@ -4,7 +4,7 @@
       "nof_threads":8
    },
    "hodl":{
-      "hash_rate":500.00,
+      "hash_rate":480.00,
       "nof_threads":8
    },
    "cryptonight":{
