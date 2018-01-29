@@ -37,7 +37,7 @@ UPDATE_INTERVAL = 60
 PROFIT_INCREASE_TIME = 24 * 60 * 60    # s
 
 # number of hashes needed to compute the actual measured hash rate
-NOF_HASHES_BEFORE_UPDATE = 10
+NOF_HASHES_BEFORE_UPDATE = 10000
 
 EXCAVATOR_TIMEOUT = 10
 NICEHASH_TIMEOUT = 20
@@ -55,12 +55,16 @@ class MinerThread(threading.Thread):
         with subprocess.Popen(self.cmd, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True) as self.process:
             for line in self.process.stdout:
                 logging.info(line[ : line.rfind('\n')])
-                if 'Accepted' in line:
+                if 'Accepted' in line or 'Rejected' in line:
+                    # find hash rate
                     line = line[ : line.rfind('H/s')]
-                    line = line[line.rfind(', ') + 2 : ]
-                    hash_rate = _convert_to_float(line)
-                    self.hash_sum += hash_rate
-                    self.nof_hashes += 1
+                    hash_rate = _convert_to_float(line[line.rfind(', ') + 2 : ])
+                    # find nof hashes
+                    line = line[ : line.rfind(' H, ')]
+                    nof_hashes = int(line[line.rfind(' ') + 1 : ])
+                    # update
+                    self.hash_sum += hash_rate * nof_hashes
+                    self.nof_hashes += nof_hashes
 
     def join(self):
         self.process.terminate()
