@@ -28,7 +28,7 @@ import threading
 WALLET = '35LdgWoNdRMXK6dQzJaJSnaLw5W3o3tFG6'
 WORKER = 'worker1'
 REGION = 'eu' # eu, usa, hk, jp, in, br
-BENCHMARKS_FILE = 'benchmarks.json'
+BENCHMARKS_FILE = '/host_files/benchmarks.json'
 
 PROFIT_SWITCH_THRESHOLD = 0.05
 UPDATE_INTERVAL = 60

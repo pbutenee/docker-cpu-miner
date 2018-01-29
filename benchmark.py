@@ -54,7 +54,7 @@ def run(nicehash_algorithms):
 	        else:
 	            logging.info('algorithm ' + algorithm + ' not added because the hash rate was 0.')
 
-	json.dump(benchmarked_algorithms, open('benchmarks.json', 'w'))
+	json.dump(benchmarked_algorithms, open(cpuminer_driver.BENCHMARKS_FILE, 'w'))
 
 
 	## logging.info the results

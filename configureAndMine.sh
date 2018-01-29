@@ -13,7 +13,7 @@ echo "WORKERNAME: $WORKERNAME"
 echo "BENCHMARK: $BENCHMARK"
 
 if [ "$BENCHMARK" = true ]; then
-        rm /benchmarks.json
+        rm -f /host_files/benchmarks.json
 fi
 
 python3 cpuminer_driver.py $WALLET $WORKERNAME
