@@ -33,9 +33,8 @@ RUN apt-get update && \
 	mkdir /host_files
 
 COPY cpuminer_driver.py .
+COPY benchmark.py .
 COPY algorithms.txt .
-
-COPY benchmarks.json .
 
 ARG WALLET=35LdgWoNdRMXK6dQzJaJSnaLw5W3o3tFG6
 ENV WALLET $WALLET
