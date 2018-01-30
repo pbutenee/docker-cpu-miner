@@ -29,8 +29,7 @@ COPY configureAndMine.sh .
 RUN apt-get update && \
     apt-get install -y libcurl3 libjansson4 python3 && \
 	rm -rf /var/lib/apt/lists/* && \
-	chmod +x configureAndMine.sh && \
-	mkdir /host_files
+	chmod +x configureAndMine.sh
 
 COPY cpuminer_driver.py .
 COPY benchmark.py .
