@@ -61,7 +61,7 @@ class MinerThread(threading.Thread):
                     hash_rate = _convert_to_float(line[line.rfind(', ') + 2 : ])
                     # find nof hashes
                     line = line[ : line.rfind('H, ')]
-                    nof_hashes = _convert_to_float(line[line.rfind(' ') + 1 : ])
+                    nof_hashes = _convert_to_float(line[line[ : -2].rfind(' ') + 1 : ])
                     # update
                     self.hash_sum += hash_rate * nof_hashes
                     self.nof_hashes += nof_hashes
