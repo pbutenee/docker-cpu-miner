@@ -23,6 +23,7 @@ from time import sleep, time
 import os.path
 import subprocess
 import threading
+import numpy as np
 
 
 WALLET = '35LdgWoNdRMXK6dQzJaJSnaLw5W3o3tFG6'
@@ -44,10 +45,14 @@ NICEHASH_TIMEOUT = 20
 
 
 class MinerThread(threading.Thread):
-    def __init__(self, cmd):
+    def __init__(self, cmd, nof_threads):
         self.cmd = cmd
-        self.hash_sum = 0
-        self.nof_hashes = 0
+        self.hash_sum = np.zeros((nof_threads,))
+        self.nof_hashes = np.zeros((nof_threads,))
+
+        self.fail_count = 0
+        self.last_fail_time = 0
+
         self.process = None
         threading.Thread.__init__(self)
 
@@ -55,16 +60,26 @@ class MinerThread(threading.Thread):
         with subprocess.Popen(self.cmd, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True) as self.process:
             for line in self.process.stdout:
                 logging.info(line[ : line.rfind('\n')])
-                if 'Accepted' in line or 'Rejected' in line:
+                if 'CPU #' in line:
                     # find hash rate
                     line = line[ : line.rfind('H/s')]
                     hash_rate = _convert_to_float(line[line.rfind(', ') + 2 : ])
                     # find nof hashes
                     line = line[ : line.rfind('H, ')]
-                    nof_hashes = _convert_to_float(line[line[ : -2].rfind(' ') + 1 : ])
+                    nof_hashes = _convert_to_float(line[line[ : -2].rfind(': ') + 2 : ])
+                    # find core number
+                    core_nr = int(line[line.rfind('#') + 1 : line.rfind(': ')])
                     # update
-                    self.hash_sum += hash_rate * nof_hashes
-                    self.nof_hashes += nof_hashes
+                    self.hash_sum[core_nr] += hash_rate * nof_hashes
+                    self.nof_hashes[core_nr] += nof_hashes
+                elif 'stratum_recv_line failed' in line:
+                    if time() - self.last_fail_time > 20:
+                        # too long ago so reset
+                        self.fail_count = 1
+                    else:
+                        self.fail_count += 1
+                    self.last_fail_time = time()
+
 
     def join(self):
         self.process.terminate()
@@ -113,7 +128,14 @@ def nicehash_mbtc_per_day(benchmarks, paying):
     """
     revenue = {}
     for algorithm in benchmarks:
+        # ignore revenue if the algorithm fails a lot
+        if 'last_fail_time' in benchmarks[algorithm] and time() - benchmarks[algorithm]['last_fail_time'] < 60 * 60:
+            revenue[algorithm] = 0
+            continue
+
+        # compute expected revenue
         revenue[algorithm] = paying[algorithm] * benchmarks[algorithm]['hash_rate'] * (24*60*60) * 1e-11
+
         # increase revenue by 20% if the algortihm hasn't been updated ever or if it has been more than 24h
         if 'last_updated' not in benchmarks[algorithm]:
             revenue[algorithm] *= 1.2
@@ -156,12 +178,17 @@ def main():
         except (json.decoder.JSONDecodeError, KeyError):
             logging.warning('failed to parse NiceHash stats')
         else:
-            # Update hash rate if enough accepted hases have been seen
-            if cpuminer_thread != None and cpuminer_thread.nof_hashes > NOF_HASHES_BEFORE_UPDATE:
-                benchmarks[running_algorithm]['hash_rate'] = cpuminer_thread.hash_sum / cpuminer_thread.nof_hashes
-                benchmarks[running_algorithm]['last_updated'] = time()
-                json.dump(benchmarks, open(BENCHMARKS_FILE, 'w'))
-                logging.info('UPDATED HASH RATE OF ' + running_algorithm + ' TO: ' + str(benchmarks[running_algorithm]['hash_rate']))
+            if cpuminer_thread != None:
+                # Update hash rate if enough accepted hases have been seen
+                if np.min(cpuminer_thread.nof_hashes) > NOF_HASHES_BEFORE_UPDATE:
+                    benchmarks[running_algorithm]['hash_rate'] = np.sum(cpuminer_thread.hash_sum / cpuminer_thread.nof_hashes)
+                    benchmarks[running_algorithm]['last_updated'] = time()
+                    json.dump(benchmarks, open(BENCHMARKS_FILE, 'w'))
+                    logging.info('UPDATED HASH RATE OF ' + running_algorithm + ' TO: ' + str(benchmarks[running_algorithm]['hash_rate']))
+                # Remove payrate if the algorithm is not working
+                if cpuminer_thread.fail_count > 5 and time() - cpuminer_thread.last_fail_time < 60:
+                    payrates[running_algorithm] = 0
+                    benchmarks[running_algorithm]['last_fail_time'] = cpuminer_thread.last_fail_time
 
             # Compute payout and get best algorithm
             payrates = nicehash_mbtc_per_day(benchmarks, paying)
@@ -180,7 +207,7 @@ def main():
                 logging.info('starting mining using ' + best_algorithm + ' using ' + str(benchmarks[best_algorithm]['nof_threads']) + ' threads')
                 cpuminer_thread = MinerThread(['./cpuminer', '-u', WALLET + '.' + WORKER, '-p', 'x',
                     '-o', 'stratum+tcp://' + best_algorithm + '.' + REGION + '.' + 'nicehash.com:' + str(ports[best_algorithm]),
-                    '-a', best_algorithm, '-t', str(benchmarks[best_algorithm]['nof_threads'])])
+                    '-a', best_algorithm, '-t', str(benchmarks[best_algorithm]['nof_threads'])], benchmarks[best_algorithm]['nof_threads'])
                 cpuminer_thread.start()
                 running_algorithm = best_algorithm
 

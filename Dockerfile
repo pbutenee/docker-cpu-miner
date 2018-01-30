@@ -27,7 +27,7 @@ COPY --from=builder /cpuminer-opt/cpuminer .
 COPY configureAndMine.sh .
 
 RUN apt-get update && \
-    apt-get install -y libcurl3 libjansson4 python3 && \
+    apt-get install -y libcurl3 libjansson4 python3 python3-numpy && \
 	rm -rf /var/lib/apt/lists/* && \
 	chmod +x configureAndMine.sh
 
