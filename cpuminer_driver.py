@@ -189,6 +189,8 @@ def main():
                 if cpuminer_thread.fail_count > 5 and time() - cpuminer_thread.last_fail_time < 60:
                     payrates[running_algorithm] = 0
                     benchmarks[running_algorithm]['last_fail_time'] = cpuminer_thread.last_fail_time
+                    json.dump(benchmarks, open(BENCHMARKS_FILE, 'w'))
+                    logging.error(running_algorithm + ' FAILS MORE THAN ALLOWED SO IGNORING IT FOR NOW!')
 
             # Compute payout and get best algorithm
             payrates = nicehash_mbtc_per_day(benchmarks, paying)
