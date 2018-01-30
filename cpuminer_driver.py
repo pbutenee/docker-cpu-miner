@@ -160,7 +160,7 @@ def main():
             if cpuminer_thread != None and cpuminer_thread.nof_hashes > NOF_HASHES_BEFORE_UPDATE:
                 benchmarks[running_algorithm]['hash_rate'] = cpuminer_thread.hash_sum / cpuminer_thread.nof_hashes
                 benchmarks[running_algorithm]['last_updated'] = time()
-                json.dump(benchmarks, open('benchmarks.json', 'w'))
+                json.dump(benchmarks, open(BENCHMARKS_FILE, 'w'))
                 logging.info('UPDATED HASH RATE OF ' + running_algorithm + ' TO: ' + str(benchmarks[running_algorithm]['hash_rate']))
 
             # Compute payout and get best algorithm
