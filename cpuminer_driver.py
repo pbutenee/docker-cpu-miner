@@ -213,6 +213,8 @@ def main():
                 cpuminer_thread.start()
                 running_algorithm = best_algorithm
 
+            if (np.sum(cpuminer_thread.nof_hashes) > 0) :
+                logging.info('Current average hashrate is %f' % np.sum(cpuminer_thread.hash_sum / cpuminer_thread.nof_hashes))
             logging.info(running_algorithm + ' is currently expected to generate %f BTC/day or %f BTC/month'
                          % (payrates[running_algorithm] / 1000, payrates[running_algorithm] * 365 / 12 / 1000))
         sleep(UPDATE_INTERVAL)
