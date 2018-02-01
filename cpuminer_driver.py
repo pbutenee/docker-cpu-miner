@@ -106,7 +106,7 @@ def nicehash_multialgo_info():
     """Retrieves pay rates and connection ports for every algorithm from the NiceHash API."""
     response = urllib.request.urlopen('https://api.nicehash.com/api?method=simplemultialgo.info',
                                       None, NICEHASH_TIMEOUT)
-    query = json.loads(response.read().decode('ascii')) #json.load(response)
+    query = json.loads(response.read().decode('ascii'))
     paying = {}
     ports = {}
     for algorithm in query['result']['simplemultialgo']:
@@ -213,6 +213,8 @@ def main():
                 cpuminer_thread.start()
                 running_algorithm = best_algorithm
 
+            logging.info(running_algorithm + ' is currently expected to generate %f BTC/day or %f BTC/month'
+                         % (payrates[running_algorithm] / 1000, payrates[running_algorithm] * 365 / 12 / 1000))
         sleep(UPDATE_INTERVAL)
 
 if __name__ == '__main__':
