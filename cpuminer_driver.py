@@ -213,11 +213,18 @@ def main():
                 cpuminer_thread.start()
                 running_algorithm = best_algorithm
 
-            if (np.sum(cpuminer_thread.nof_hashes) > 0) :
-                logging.info('Current average hashrate is %f H/s' % np.sum(cpuminer_thread.hash_sum / cpuminer_thread.nof_hashes))
-            logging.info(running_algorithm + ' is currently expected to generate %f mBTC/day or %f mBTC/month'
-                         % (payrates[running_algorithm], payrates[running_algorithm] * 365 / 12))
-        sleep(UPDATE_INTERVAL)
+        def printHashRateAndPayRate():
+            if running_algorithm is not None:
+                if (np.sum(cpuminer_thread.nof_hashes) > 0) :
+                    logging.info('Current average hashrate is %f H/s' % np.sum(cpuminer_thread.hash_sum / cpuminer_thread.nof_hashes))
+                if 'payrates' in locals() and running_algorithm in payrates:
+                    logging.info(running_algorithm + ' is currently expected to generate %f mBTC/day or %f mBTC/month'
+                                 % (payrates[running_algorithm], payrates[running_algorithm] * 365 / 12))
+
+        printHashRateAndPayRate()
+        sleep(UPDATE_INTERVAL / 2)
+        printHashRateAndPayRate()
+        sleep(UPDATE_INTERVAL / 2)
 
 if __name__ == '__main__':
     if len(sys.argv) > 0:
