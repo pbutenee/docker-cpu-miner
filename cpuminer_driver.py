@@ -134,7 +134,7 @@ def nicehash_mbtc_per_day(benchmarks, paying):
             continue
 
         # compute expected revenue
-        revenue[algorithm] = paying[algorithm] * benchmarks[algorithm]['hash_rate'] * (24*60*60) * 1e-11
+        revenue[algorithm] = compute_revenue(paying[algorithm], benchmarks[algorithm]['hash_rate'])
 
         # increase revenue by 20% if the algortihm hasn't been updated ever or if it has been more than 24h
         if 'last_updated' not in benchmarks[algorithm]:
@@ -146,7 +146,8 @@ def nicehash_mbtc_per_day(benchmarks, paying):
 
     return revenue
 
-
+def compute_revenue(paying, hash_rate):
+    return paying * hash_rate * (24*60*60) * 1e-11
 
 def main():
     """Main program."""
@@ -216,10 +217,11 @@ def main():
         def printHashRateAndPayRate():
             if running_algorithm is not None:
                 if (np.sum(cpuminer_thread.nof_hashes) > 0) :
-                    logging.info('Current average hashrate is %f H/s' % np.sum(cpuminer_thread.hash_sum / cpuminer_thread.nof_hashes))
-                if 'payrates' in locals() and running_algorithm in payrates:
+                    hash_rate = np.sum(cpuminer_thread.hash_sum / cpuminer_thread.nof_hashes)
+                    logging.info('Current average hashrate is %f H/s' % hash_rate)
+                    current_payrate = compute_revenue(paying[running_algorithm], hash_rate)
                     logging.info(running_algorithm + ' is currently expected to generate %f mBTC/day or %f mBTC/month'
-                                 % (payrates[running_algorithm], payrates[running_algorithm] * 365 / 12))
+                                 % (current_payrate, current_payrate * 365 / 12))
 
         printHashRateAndPayRate()
         sleep(UPDATE_INTERVAL / 2)
